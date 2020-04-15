@@ -15,6 +15,15 @@
 #include <AsyncJson.h>
 #include <Wire.h>
 #include <string.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+#define OLED_RESET 1
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define SLAVE_ADDRESS 8
 
@@ -23,7 +32,8 @@ AsyncWebServer server(80);
 const char *ssid = "Ceyentra Wifi 3";
 const char *password = "CeyTec@3";
 
-// bool isProcessing = false;
+bool isProcessing = false;
+String slots;
 
 void notFound(AsyncWebServerRequest *request)
 {
@@ -40,6 +50,8 @@ AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/medicin
   const int arr_size = arr.size();
 
   int i = 0;
+
+  slots = "";
 
   for (auto value : arr)
   {
@@ -58,9 +70,16 @@ AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/medicin
       Wire.write("\n");
     }
 
+    String temp(value_slot);
+    temp += "\n";
+
+    slots += temp;
+
     i++;
   }
   Wire.endTransmission();
+
+  isProcessing = true;
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   DynamicJsonBuffer jsonBuffer;
@@ -99,6 +118,14 @@ void setup()
 
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  {
+    Serial.println(F("SSD1306 allocation failed"));
+  }
+
+  display.display();
+  delay(1000);
 
   server.on("/progress", HTTP_GET, [](AsyncWebServerRequest *request) {
     Wire.requestFrom(SLAVE_ADDRESS, 4);
@@ -139,26 +166,60 @@ void setup()
   server.begin();
 }
 
-// int i = 0;
+int i = 0;
 
 void loop()
 {
-  // if (isProcessing && i == 10)
-  // {
-  //   isProcessing = false;
-  //   i = 0;
-  //   Serial.println("Progress Done");
-  // }
 
-  // if (isProcessing)
-  // {
-  //   i++;
-  // }
+  Wire.requestFrom(SLAVE_ADDRESS, 4);
+
+  String str;
+
+  while (Wire.available())
+  {
+    char c = Wire.read();
+    str += c;
+  }
+
+  if (str.equalsIgnoreCase("proc"))
+  {
+    display.clearDisplay();
+
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    display.cp437(true);
+
+    display.println("Processing...");
+    display.println();
+    display.println(slots);
+    display.println(i);
+
+    display.display();
+  }
+  else
+  {
+    display.clearDisplay();
+
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    display.cp437(true);
+
+    display.println(slots);
+    display.println();
+    display.println("Waiting for new Request...");
+    display.println(i);
+
+    display.display();
+  }
+
+  i++;
 
   digitalWrite(LED_BUILTIN, HIGH);
   Serial.println("Node is Running...");
-  delay(1000);
+  delay(500);
 
   digitalWrite(LED_BUILTIN, LOW);
-  delay(1000);
+  delay(500);
 }
