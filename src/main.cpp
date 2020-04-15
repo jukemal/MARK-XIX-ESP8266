@@ -25,31 +25,40 @@ AsyncWebServer server(80);
 const char *ssid = "Ceyentra Wifi 3";
 const char *password = "CeyTec@3";
 
+bool isProcessing = false;
+
 void notFound(AsyncWebServerRequest *request)
 {
   request->send(404, "application/json", "{\"error\":\"Not Found\"}");
 }
 
 AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/medicines", [](AsyncWebServerRequest *request, JsonVariant &json) {
-    //  ReadLoggingStream loggingStream(json, Serial);
+  
+    // json.prettyPrintTo(Serial);
 
-  // Serial.println("jsom");
+  JsonArray &arr = json.as<JsonArray>();
 
-  json.prettyPrintTo(Serial);
+  for (auto value : arr)
+  {
+    // const char *value_description = value["description"]; 
+    // const char *value_image_link = value["image_link"];   
+    // const char *value_name = value["name"];               
+    // int value_price = value["price"];                     
+    const char *value_slot = value["slot"];
 
-  // JsonObject &jsonObj = json.as<JsonObject>();
+    Serial.println(value_slot);
+  }
 
-  // if (request->url())
-  // {
-  //   /* code */
-  // }
+  isProcessing = true;
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   DynamicJsonBuffer jsonBuffer;
+
   JsonObject &root = jsonBuffer.createObject();
-  root["heap"] = ESP.getFreeHeap();
-  root["ssid"] = WiFi.SSID();
+
+  root["success"] = "Successfully Started.";
   root.printTo(*response);
+
   request->send(response);
 });
 
@@ -81,6 +90,25 @@ void setup()
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
 
+  server.on("/progress", HTTP_GET, [](AsyncWebServerRequest *request) {
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    DynamicJsonBuffer jsonBuffer;
+
+    JsonObject &root = jsonBuffer.createObject();
+
+    if (isProcessing)
+    {
+      root["progress"] = "processing";
+    }else
+    {
+      root["progress"] = "done";
+    }
+    
+    root.printTo(*response);
+
+    request->send(response);
+  });
+
   server.addHandler(handler);
 
   server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
@@ -90,8 +118,21 @@ void setup()
   server.begin();
 }
 
+int i = 0;
+
 void loop()
 {
+  if (isProcessing && i==10)
+  {
+    isProcessing = false;
+    i = 0;
+  }
+
+  if (isProcessing)
+  {
+    i++;
+  }
+
   digitalWrite(LED_BUILTIN, HIGH);
   Serial.println("Server is Running...");
   delay(1000);       
