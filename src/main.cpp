@@ -23,7 +23,7 @@ AsyncWebServer server(80);
 const char *ssid = "Ceyentra Wifi 3";
 const char *password = "CeyTec@3";
 
-bool isProcessing = false;
+// bool isProcessing = false;
 
 void notFound(AsyncWebServerRequest *request)
 {
@@ -53,7 +53,7 @@ AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/medicin
 
     Wire.write(value_slot);
 
-    if (i<arr_size-1)
+    if (i < arr_size - 1)
     {
       Wire.write("\n");
     }
@@ -61,9 +61,6 @@ AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/medicin
     i++;
   }
   Wire.endTransmission();
-
-  isProcessing = true;
-  Serial.println("Progress Started");
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   DynamicJsonBuffer jsonBuffer;
@@ -104,12 +101,22 @@ void setup()
   Serial.println(WiFi.localIP());
 
   server.on("/progress", HTTP_GET, [](AsyncWebServerRequest *request) {
+    Wire.requestFrom(SLAVE_ADDRESS, 4);
+
+    String str;
+
+    while (Wire.available())
+    {
+      char c = Wire.read();
+      str += c;
+    }
+
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     DynamicJsonBuffer jsonBuffer;
 
     JsonObject &root = jsonBuffer.createObject();
 
-    if (isProcessing)
+    if (str.equalsIgnoreCase("proc"))
     {
       root["progress"] = "processing";
     }
@@ -132,21 +139,21 @@ void setup()
   server.begin();
 }
 
-int i = 0;
+// int i = 0;
 
 void loop()
 {
-  if (isProcessing && i == 10)
-  {
-    isProcessing = false;
-    i = 0;
-    Serial.println("Progress Done");
-  }
+  // if (isProcessing && i == 10)
+  // {
+  //   isProcessing = false;
+  //   i = 0;
+  //   Serial.println("Progress Done");
+  // }
 
-  if (isProcessing)
-  {
-    i++;
-  }
+  // if (isProcessing)
+  // {
+  //   i++;
+  // }
 
   digitalWrite(LED_BUILTIN, HIGH);
   Serial.println("Node is Running...");
