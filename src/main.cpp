@@ -11,14 +11,12 @@
 
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
-#include <SoftwareSerial.h>
 #include <StreamUtils.h>
 #include <AsyncJson.h>
+#include <Wire.h>
+#include <string.h>
 
-#define D6 6
-#define D5 5
-
-SoftwareSerial s(D6, D5); // (Rx, Tx)
+#define SLAVE_ADDRESS 8
 
 AsyncWebServer server(80);
 
@@ -33,23 +31,39 @@ void notFound(AsyncWebServerRequest *request)
 }
 
 AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/medicines", [](AsyncWebServerRequest *request, JsonVariant &json) {
-  
-    // json.prettyPrintTo(Serial);
+  // json.prettyPrintTo(Serial);
+
+  Wire.beginTransmission(SLAVE_ADDRESS);
 
   JsonArray &arr = json.as<JsonArray>();
 
+  const int arr_size = arr.size();
+
+  int i = 0;
+
   for (auto value : arr)
   {
-    // const char *value_description = value["description"]; 
-    // const char *value_image_link = value["image_link"];   
-    // const char *value_name = value["name"];               
-    // int value_price = value["price"];                     
+    // const char *value_description = value["description"];
+    // const char *value_image_link = value["image_link"];
+    // const char *value_name = value["name"];
+    // int value_price = value["price"];
     const char *value_slot = value["slot"];
 
     Serial.println(value_slot);
+
+    Wire.write(value_slot);
+
+    if (i<arr_size-1)
+    {
+      Wire.write("\n");
+    }
+
+    i++;
   }
+  Wire.endTransmission();
 
   isProcessing = true;
+  Serial.println("Progress Started");
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   DynamicJsonBuffer jsonBuffer;
@@ -66,8 +80,7 @@ void setup()
 {
 
   Serial.begin(115200);
-
-  s.begin(9600);
+  Wire.begin(4, 5);
 
   if (!SPIFFS.begin())
   {
@@ -99,11 +112,12 @@ void setup()
     if (isProcessing)
     {
       root["progress"] = "processing";
-    }else
+    }
+    else
     {
       root["progress"] = "done";
     }
-    
+
     root.printTo(*response);
 
     request->send(response);
@@ -122,10 +136,11 @@ int i = 0;
 
 void loop()
 {
-  if (isProcessing && i==10)
+  if (isProcessing && i == 10)
   {
     isProcessing = false;
     i = 0;
+    Serial.println("Progress Done");
   }
 
   if (isProcessing)
@@ -134,9 +149,9 @@ void loop()
   }
 
   digitalWrite(LED_BUILTIN, HIGH);
-  Serial.println("Server is Running...");
-  delay(1000);       
+  Serial.println("Node is Running...");
+  delay(1000);
 
-  digitalWrite(LED_BUILTIN, LOW); 
+  digitalWrite(LED_BUILTIN, LOW);
   delay(1000);
 }
