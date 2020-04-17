@@ -29,8 +29,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 AsyncWebServer server(80);
 
-const char *ssid = "Ceyentra Wifi 3";
-const char *password = "CeyTec@3";
+const char *ssid = "SSID";
+const char *password = "Password";
 
 bool isProcessing = false;
 String slots;
@@ -103,12 +103,6 @@ void setup()
   //I2C Communication
   Wire.begin(4, 5);
 
-  if (!SPIFFS.begin())
-  {
-    Serial.println("An Error has occurred while mounting SPIFFS");
-    return;
-  }
-
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
@@ -170,8 +164,6 @@ void setup()
   });
 
   server.addHandler(handler);
-
-  server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
   server.onNotFound(notFound);
 
