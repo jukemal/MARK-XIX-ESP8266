@@ -40,6 +40,9 @@ void notFound(AsyncWebServerRequest *request)
   request->send(404, "application/json", "{\"error\":\"Not Found\"}");
 }
 
+/*
+POST '/medicines'
+*/
 AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/medicines", [](AsyncWebServerRequest *request, JsonVariant &json) {
   // json.prettyPrintTo(Serial);
 
@@ -96,6 +99,8 @@ void setup()
 {
 
   Serial.begin(115200);
+
+  //I2C Communication
   Wire.begin(4, 5);
 
   if (!SPIFFS.begin())
@@ -119,6 +124,8 @@ void setup()
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
 
+
+ //Setting up display
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
   {
     Serial.println(F("SSD1306 allocation failed"));
@@ -127,6 +134,11 @@ void setup()
   display.display();
   delay(1000);
 
+  /*
+  GET '/progress'
+
+  Returns current progress by fetching it from arduino through I2C. 
+  */
   server.on("/progress", HTTP_GET, [](AsyncWebServerRequest *request) {
     Wire.requestFrom(SLAVE_ADDRESS, 4);
 
@@ -170,6 +182,7 @@ int i = 0;
 
 void loop()
 {
+  //Simulation processing
 
   Wire.requestFrom(SLAVE_ADDRESS, 4);
 
