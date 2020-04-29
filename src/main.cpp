@@ -11,19 +11,9 @@
 
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
-#include <StreamUtils.h>
 #include <AsyncJson.h>
 #include <Wire.h>
 #include <string.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-
-#define OLED_RESET 1
-
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define SLAVE_ADDRESS 8
 
@@ -70,11 +60,11 @@ AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/medicin
 
     if (i < arr_size - 1)
     {
-      Wire.write("\n");
+      Wire.write("*");
     }
 
     String temp(value_slot);
-    temp += "\n";
+    temp += "\t";
 
     slots += temp;
 
@@ -103,12 +93,6 @@ void setup()
   //I2C Communication
   Wire.begin(4, 5);
 
-  if (!SPIFFS.begin())
-  {
-    Serial.println("An Error has occurred while mounting SPIFFS");
-    return;
-  }
-
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
@@ -123,16 +107,6 @@ void setup()
 
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
-
-
- //Setting up display
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
-  {
-    Serial.println(F("SSD1306 allocation failed"));
-  }
-
-  display.display();
-  delay(1000);
 
   /*
   GET '/progress'
@@ -171,18 +145,13 @@ void setup()
 
   server.addHandler(handler);
 
-  server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
-
   server.onNotFound(notFound);
 
   server.begin();
 }
 
-int i = 0;
-
 void loop()
 {
-  //Simulation processing
 
   Wire.requestFrom(SLAVE_ADDRESS, 4);
 
@@ -196,41 +165,16 @@ void loop()
 
   if (str.equalsIgnoreCase("proc"))
   {
-    display.clearDisplay();
-
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    display.cp437(true);
-
-    display.println("Processing...");
-    display.println();
-    display.println(slots);
-    display.println(i);
-
-    display.display();
+    
+    Serial.println("Processing...");
+    Serial.println(slots);
   }
   else
   {
-    display.clearDisplay();
-
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    display.cp437(true);
-
-    display.println(slots);
-    display.println();
-    display.println("Waiting for new Request...");
-    display.println(i);
-
-    display.display();
+    Serial.println("Waiting for new Request...");
   }
 
-  i++;
-
   digitalWrite(LED_BUILTIN, HIGH);
-  Serial.println("Node is Running...");
   delay(500);
 
   digitalWrite(LED_BUILTIN, LOW);
